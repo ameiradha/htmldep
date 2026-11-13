@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "Site": {
+      "title": "Site",
+      "description": "An HTML project deployed by a user for instant public hosting",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the deployed HTML site"
+        },
+        "slug": {
+          "type": "string",
+          "description": "Random domain slug for public access",
+          "pattern": "^[a-z0-9-]+$",
+          "maxLength": 64
+        },
+        "title": {
+          "type": "string",
+          "description": "Display title of the HTML page",
+          "maxLength": 120
+        },
+        "htmlContent": {
+          "type": "string",
+          "description": "The raw HTML file contents",
+          "maxLength": 1048576
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the Google account who owns this HTML deploy"
+        },
+        "ownerEmail": {
+          "type": "string",
+          "description": "Google email address of the owner",
+          "maxLength": 120
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "Whether the HTML file is publicly accessible"
+        },
+        "fileSizeBytes": {
+          "type": "number",
+          "description": "Size in bytes of the HTML content"
+        },
+        "version": {
+          "type": "number",
+          "description": "Revision number that increments on each update"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional short description or notes about the deploy",
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": [
+        "slug",
+        "title",
+        "htmlContent",
+        "ownerId",
+        "ownerEmail",
+        "isPublished",
+        "fileSizeBytes",
+        "version",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/sites/{siteId}": {
+      "schema": "Site",
+      "description": "Stores user HTML deployments indexed by siteId or slug with strict owner access and instant public read if published"
+    }
+  }
+}

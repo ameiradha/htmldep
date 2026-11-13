@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny all documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidSite(data) {
+      return data.keys().hasAll([
+        'slug', 'title', 'htmlContent', 'ownerId', 'ownerEmail',
+        'isPublished', 'fileSizeBytes', 'version', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'slug', 'title', 'htmlContent', 'ownerId', 'ownerEmail',
+        'isPublished', 'fileSizeBytes', 'version', 'description', 'createdAt', 'updatedAt'
+      ]) &&
+      data.slug is string && data.slug.size() >= 3 && data.slug.size() <= 64 &&
+      data.slug.matches('^[a-z0-9-]+$') &&
+      data.title is string && data.title.size() > 0 && data.title.size() <= 120 &&
+      data.htmlContent is string && data.htmlContent.size() <= 1048576 &&
+      data.ownerId is string && data.ownerId == request.auth.uid &&
+      data.ownerEmail is string && data.ownerEmail.size() <= 120 &&
+      data.isPublished is bool &&
+      data.fileSizeBytes is number && data.fileSizeBytes >= 0 &&
+      data.version is number && data.version >= 1 &&
+      (!('description' in data) || (data.description is string && data.description.size() <= 300));
+    }
+
+    match /sites/{siteId} {
+      // 1. Single document read:
+      // Instant public access for published HTML sites, or owner can view their own site
+      allow get: if isValidId(siteId) && (
+        resource.data.isPublished == true ||
+        (isSignedIn() && resource.data.ownerId == request.auth.uid)
+      );
+
+      // 2. List query:
+      // Strictly secured to owner only! Users cannot see or list other users' HTML projects.
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+
+      // 3. Create site:
+      // Signed in user creating their own site with strictly valid schema and server timestamp
+      allow create: if isSignedIn() &&
+        isValidId(siteId) &&
+        isValidSite(incoming()) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      // 4. Update site:
+      // Preserves URL slug, ownerId, createdAt while updating htmlContent, version, updatedAt
+      allow update: if isSignedIn() &&
+        isValidId(siteId) &&
+        isValidSite(incoming()) &&
+        existing().ownerId == request.auth.uid &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().slug == existing().slug &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'htmlContent', 'isPublished', 'fileSizeBytes', 'version', 'description', 'updatedAt'
+        ]);
+
+      // 5. Delete site:
+      // Owner only
+      allow delete: if isSignedIn() &&
+        isValidId(siteId) &&
+        existing().ownerId == request.auth.uid;
+    }
+
+    // Test connection doc path
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

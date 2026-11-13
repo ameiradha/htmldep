@@ -1,0 +1,8 @@
+{
+  "name": "HostDeploy - Instant HTML Hosting & Dashboard",
+  "description": "Deploy and host HTML files instantly with random domains, Google authentication, real-time live preview, and URL preservation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
